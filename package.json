@@ -1,6 +1,6 @@
 {
   "name": "@sjaakp/sijssies",
-  "version": "1.0.0",
+  "version": "0.9.0",
   "description": "Amsterdam variant of the famous Boids",
   "browser": "./dist/sijssies.js",
   "files": [

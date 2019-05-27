@@ -12,7 +12,10 @@ const year = new Date().getFullYear();
 const banner = `
 /*!
  * ${appName} ${version}
- * (c) ${year} sjaakpriester.nl
+ * (c) ${year} Sjaak Priester, Amsterdam
+ * MIT License
+ * https://github.com/sjaakp/sijssies
+ * https://sjaakpriester.nl
  */
 `;
 
@@ -55,13 +58,13 @@ export default {
                  dangerousTaggedTemplateString: true
              }
         }),
-
         uglify({
+/*
             output: {
                  comments: /^!/
             }
+*/
         })
-
     ],
     external: [
  //       'lodash'
