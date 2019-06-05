@@ -1,4 +1,17 @@
 
+/**
+ * sjaakp/sijssies
+ * ---------------
+ *
+ * Amsterdam variant of the famous 'boids' swarm-intelligence algorithm
+ * Version 0.9.0
+ * Copyright (c) 2019
+ * Sjaak Priester, Amsterdam
+ * MIT License
+ * https://github.com/sjaakp/sijssies
+ * https://sjaakpriester.nl
+ */
+
 import * as mat3 from 'gl-matrix/esm/mat3';
 import * as mat4 from 'gl-matrix/esm/mat4';
 import * as vec3 from 'gl-matrix/esm/vec3';
@@ -63,10 +76,13 @@ Bird.prototype.updateModel = function()
 // calculate new position from course, update u_model and u_normal
 Bird.prototype.update = function(delta)
 {
-    let move = vec3.create();
-    vec3.scale(move, this.course, delta);
-    vec3.add(this.position, this.position, move);
-    return this.updateModel();
+    if (! this.perching)    {
+        let move = vec3.create();
+        vec3.scale(move, this.course, delta);
+        vec3.add(this.position, this.position, move);
+        this.updateModel();
+    }
+    return this;
 };
 
 // calculate view-projection
@@ -113,6 +129,22 @@ Bird.prototype.flee = function (from, strength) {
     return this;
 };
 
+Bird.prototype.perch = function(duration, level = 0)  {
+    if (this.perching > 0)  {
+        this.perching--;
+    } else    {
+        if (this.position[1] < level) {
+            this.position[1] = level;
+            this.perching = Math.floor(duration * Math.random());
+            if (this.course[1] < 0) {
+                this.course[1] = -this.course[1];
+            }
+        }
+    }
+
+    return this;
+};
+
 Bird.prototype.root = function (rootStrength) {
     if (!this.perching) {
         let dist2 = vec3.squaredLength(this.position);
@@ -155,13 +187,14 @@ Bird.prototype.bounds = function (maxAccel, maxSpeed) {
 };
 
 // avoid collisions with neighbours
-Bird.prototype.separate = function (neighbours, distance, strength = 1) {     // neighbours.length > 0
+Bird.prototype.separate = function (neighbours, strength = 1) {     // neighbours.length > 0
+    let distance = 3 * this.birdSettings.size;
     let accu = vec3.create();
     neighbours.reduce((acc, v) => {
         let other = v[0], dist = v[1];
         if (dist < distance) {  // dist always > 0
             let diff = vec3.create();
-            vec3.subtract(diff, other.position, this.position);
+            vec3.subtract(diff, this.position, other.position);
             vec3.scale(diff, diff, 1 / dist);   // weigh by distance
             return vec3.add(acc, acc, diff);
         }

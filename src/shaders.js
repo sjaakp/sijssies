@@ -1,4 +1,17 @@
 
+/**
+ * sjaakp/sijssies
+ * ---------------
+ *
+ * Amsterdam variant of the famous 'boids' swarm-intelligence algorithm
+ * Version 0.9.0
+ * Copyright (c) 2019
+ * Sjaak Priester, Amsterdam
+ * MIT License
+ * https://github.com/sjaakp/sijssies
+ * https://sjaakpriester.nl
+ */
+
 function shader(id, type, content)
 {
     let element = document.createElement('script');

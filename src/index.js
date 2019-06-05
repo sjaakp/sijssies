@@ -34,13 +34,68 @@ import Controldesk from './Controldesk';
 import Newsdesk from './Newsdesk';
 import Sijs from './Sijs';
 import Predator from './Predator';
+import Clock from './Clock';
 
 import shaders from './shaders';
-import calcDelta from './calcDelta';
-
 import Triggers from './Triggers';
 
 import sijsBI from './sijsVerts';
+//import calcDelta from './calcDelta';
+
+const defaults = {
+    hilightColor: [0.5, 1, 0, 1],        // chartreuse
+    neighbourColor: [0, 0.8, 0.82, 1],        // darkturqoise
+    revLightDir: [0.5, 0.7, 1],
+    ambientColor: [0.42, 0.42, 0.42],
+    zoom: Math.PI / 3,
+    backgroundColor: [1, 1, 1, 1],
+    axesScale: 150,
+    nodeSearch: 24,
+    perchingLevel: -500,     // no perching: set this to -3000
+    nSijsFactor: 0.2,      // number of sijssies per pixel of canvas diagonal
+    sijs: {
+        size: 24,
+        face: [ 1, 0, 0 ],
+        limit: 1000,
+        color: [0.55, 0.27, 0.07, 1]     // saddlebrown
+    },
+    predator: {
+        size: 48,
+        face: [ 1, 0, 0 ],
+        limit: 2000,
+        color: [1, 0, 0, 1]     // red
+    },
+    controls: {
+        // x: 0,
+        // y: 0,
+        // z: 0,
+        // rot_x: 0,
+        // rot_y: 0,
+        // rot_z: 0,
+        // scale_x: 0,
+        // scale_y: 0,
+        // scale_z: 0,
+        vision: 360,
+        v_angle: 140,
+        max_accel: 0.48,
+        max_speed: 0.48,
+        noise: 0.07,
+        root_strength: 0.02,
+        perching: 120,
+        align: 0.11,
+        cohesion: 0.005,
+        separation: 0.42,
+
+        cam_angle: 30,
+        cam_dist: 1500,
+        cam_height: 400,
+        axes: false,
+        hilight: false,
+        freeze: false,
+        slomo: false,
+        pov: false,
+    }
+};
 
 function App(gl)
 {
@@ -53,13 +108,17 @@ function App(gl)
 
     const flock = [];
     let limbo = [];
-    let primeSijs, primeNeighbours;  // we may need them
+    let primeSijs, primeNeighbours;
 
-    for (let i = 0; i < settings.initialN; i++) {   // fill flock with initialN sijssies...
+    twgl.resizeCanvasToDisplaySize(gl.canvas);
+    let nSijs = Math.floor(settings.nSijsFactor * Math.hypot(gl.canvas.width, gl.canvas.height));
+        // number of sijssies depends on canvas diagonal
+
+    for (let i = 0; i < nSijs; i++) {   // fill flock with nSijs sijssies...
         let position = vec3.create();
         let course = vec3.create();
 
-        vec3.random(position, settings.limit / 3);  // ...having random position and course (3 is arbitrarely)
+        vec3.random(position, settings.sijs.limit / 1.5);  // ...having random position and course (1.5 is arbitrarely)
         vec3.random(course, controls.max_speed);
 
         let sijs = new Sijs(position, course, settings);
@@ -74,17 +133,45 @@ function App(gl)
     const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);       // can't use vec3.distance here, because a or b may be an 'intermedium object', not a sijs
     let reportNeighbours = 0;
 
-    requestAnimationFrame(render);
-    // render loop
-    function render(time) {
-        let delta = calcDelta(time, indicators);
+    function view()
+    {
+        twgl.resizeCanvasToDisplaySize(gl.canvas);
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+        let worldView = mat4.create();
+
+        if (controls.pov && primeSijs)   {   // point of view
+
+//            let eye = vec3.clone(primeSijs.position);    // first sijssie is as good as any other
+            let target = vec3.create();
+            vec3.add(target, primeSijs.position, primeSijs.course);
+            mat4.lookAt(worldView, primeSijs.position, target, up );
+
+        } else {
+            let eye = vec3.fromValues(0, controls.cam_height, controls.cam_dist);
+            vec3.rotateY(eye, eye, vec3.create(), Math.PI * controls.cam_angle / 180);
+
+            mat4.lookAt(worldView, eye, zero, up);
+        }
+        return worldView;
+    }
+
+    function tick(delta)
+    {
         indicators.nsijssies = flock.length;
 
         triggers.update(delta);
+
+        if (controls.slomo) delta /= 5;
+
         if (triggers.remove)    {
             let sijs = flock.pop();    // undefined if empty
             if (sijs) limbo.push(sijs);
-            if (sijs === primeSijs && flock.length > 0)  { primeSijs = flock[0]; }
+            if (sijs === primeSijs) {
+                primeSijs = flock.length > 0 ? flock[0] : null;
+            }
         }
         if (triggers.add)   {
             let nest = vec3.fromValues(0, controls.cam_height, 2000);
@@ -96,29 +183,9 @@ function App(gl)
             flock.push(sijs);
         }
 
-        twgl.resizeCanvasToDisplaySize(gl.canvas);
-        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-        let worldView = mat4.create();
-
-        if (controls.pov && flock.length > 0)   {   // point of view
-
-                let eye = vec3.clone(primeSijs.position);    // first sijssie is as good as any other
-                mat4.lookAt(worldView, eye, primeSijs.course, up );
-
-        } else {
-            let eye = vec3.fromValues(0, controls.cam_height, controls.cam_dist);
-            vec3.rotateY(eye, eye, vec3.create(), Math.PI * controls.cam_angle / 180);
-
-            mat4.lookAt(worldView, eye, vec3.fromValues(0, 60, 0), up);
-        }
-
         let tree = new KdTree(flock, distance, ['x', 'y', 'z']);    // put flock in kdTree
 
         let totalNeighbours = 0;
-        let freeze = controls.freeze;
         let gravityPoint = vec3.create();
 
         flock.forEach(function (sijs, index) {
@@ -132,22 +199,19 @@ function App(gl)
 
             if (sijs === primeSijs) primeNeighbours = neighbours;    // remember
 
-            if (! freeze)   {   // calculate new course
-                if (neighbours.length > 0) {
-                    sijs.separate(neighbours, controls.separation)  // crux of the swarm intelligence
-                        .align(neighbours, controls.align)
-                        .cohese(neighbours, controls.cohesion);
-                }
+            if (neighbours.length > 0) {
+                sijs.separate(neighbours, controls.separation)  // crux of the swarm intelligence
+                    .align(neighbours, controls.align)
+                    .cohese(neighbours, controls.cohesion);
+            }
 
-                sijs
-                //     .perch(controls.perching)
-                    .root(controls.root_strength)   // don't fly of the screen
-                    .noise(controls.noise)
-                    .bounds(controls.max_accel, controls.max_speed);
+            sijs.perch(controls.perching, settings.perchingLevel)
+                .root(controls.root_strength)   // don't fly of the screen
+                .noise(controls.noise)
+                .bounds(controls.max_accel, controls.max_speed);
 
-                if (predator && sijs.sees(predator, controls.v_angle))    {
-                    sijs.flee(predator.position, 0.005);
-                }
+            if (predator && sijs.sees(predator, controls.v_angle))    {
+                sijs.flee(predator.position, 0.01);
             }
         });
 
@@ -171,23 +235,24 @@ function App(gl)
             return true;
         });
 
-        if (! freeze) {
-            if (predator)   {
-                predator.root(0.01) // seek(gravityPoint, 0.03)
-                    .noise(0.08)
-                    .bounds(1, 1)
-                    .update(delta);
-            }
-
-            flock.forEach(function (sijs) {
-                sijs.update(delta);     // calculate new position
-            });
-
-            limbo.forEach(function (sijs) {
-                sijs.update(delta);     // calculate new position
-            });
+        if (predator)   {
+            predator.root(0.01) // seek(gravityPoint, 0.03)
+                .noise(0.08)
+                .bounds(1, 1)
+                .update(delta);
         }
 
+        flock.forEach(function (sijs) {
+            sijs.update(delta);     // calculate new position
+        });
+
+        limbo.forEach(function (sijs) {
+            sijs.update(delta);     // calculate new position
+        });
+    }
+
+    function render(worldView)
+    {
         if (predator) predator.project(worldView);
 
         flock.forEach(function (sijs) {
@@ -214,58 +279,16 @@ function App(gl)
         if (controls.axes)  {
             axes.draw(gl, worldView);
         }
-
-        requestAnimationFrame(render);
-
-        // console.log("Error code is " + gl.getError());
     }
 
-/*  // doesn't seem to work...
-    document.addEventListener('visibilitychange', function () {
-        if (document.visibilityState === 'visible') {
-            requestAnimationFrame(render);
-        }
-    });
-*/
-
+    let clock = new Clock(view, tick, render, controls, indicators);
+    clock.run();
 }
 
 const settings = {};
 
-const controls = new Controldesk({
-    x: 0,
-    y: 0,
-    z: 0,
-    rot_x: 0,
-    rot_y: 0,
-    rot_z: 0,
-    scale_x: 0,
-    scale_y: 0,
-    scale_z: 0,
-    vision: 200,
-    v_angle: 140,
-    max_accel: 0.48,
-    max_speed: 0.48,
-    noise: 0.12,
-    root_strength: 0.1,
-//        perching: 60,
-    align: 0.11,
-    cohesion: 0.005,
-    separation: 0.3,
+let controls;
 
-    cam_angle: 30,
-    cam_dist: 2000,
-    cam_height: 500,
-/*
-    fog_near: 1000,
-    fog_far: 3000,
-*/
-    axes: false,
-//    cube: true,
-    hilight: false,
-    freeze: false,
-    pov: false,
-});
 const indicators = new Newsdesk([
     'fps',
     'version',
@@ -280,29 +303,8 @@ function fly(id, options)
     const canvas = document.getElementById(id);
     const gl = twgl.getContext(canvas, { alpha: false });
     if (gl) {
-        Object.assign(settings, {
-            hilightColor: [0.5, 1, 0, 1],        // chartreuse
-            neighbourColor: [0, 0.8, 0.82, 1],        // darkturqoise
-            revLightDir: [0.5, 0.7, 1],
-            ambientColor: [0.42, 0.42, 0.42],
-            zoom: Math.PI / 4,
-            backgroundColor: [1, 1, 1, 1],
-            axesScale: 150,
-            nodeSearch: 24,
-            initialN: 100,
-            sijs: {
-                size: 24,
-                face: [ 1, 0, 0 ],
-                limit: 1000,
-                color: [0.55, 0.27, 0.07, 1]     // saddlebrown 
-            },
-            predator: {
-                size: 48,
-                face: [ 1, 0, 0 ],
-                limit: 2000,
-                color: [1, 0, 0, 1]     // red 
-            }
-        }, options);
+        Object.assign(settings, defaults, options);
+        controls = new Controldesk(settings.controls);
 
         twgl.setDefaults({attribPrefix: "a_"});
 

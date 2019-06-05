@@ -1,4 +1,17 @@
 
+/**
+ * sjaakp/sijssies
+ * ---------------
+ *
+ * Amsterdam variant of the famous 'boids' swarm-intelligence algorithm
+ * Version 0.9.0
+ * Copyright (c) 2019
+ * Sjaak Priester, Amsterdam
+ * MIT License
+ * https://github.com/sjaakp/sijssies
+ * https://sjaakpriester.nl
+ */
+
 export default function Triggers(tempo = 250)
 {
     this.remove = false;
@@ -7,13 +20,13 @@ export default function Triggers(tempo = 250)
     this.counter = tempo;
     this.removePending = false;
     this.addPending = false;
-    this.minusBtn = document.getElementById('btn-minus');
-    this.plusBtn = document.getElementById('btn-plus');
-    if (this.minusBtn) {
-        this.minusBtn.addEventListener('mousedown', () => { this.removePending = true; });
+    let minusBtn = document.getElementById('btn-minus');
+    let plusBtn = document.getElementById('btn-plus');
+    if (minusBtn) {
+        minusBtn.addEventListener('mousedown', () => { this.removePending = true; });
     }
-    if (this.plusBtn) {
-        this.plusBtn.addEventListener('mousedown', () => { this.addPending = true; });
+    if (plusBtn) {
+        plusBtn.addEventListener('mousedown', () => { this.addPending = true; });
     }
     document.addEventListener('mouseup', () => { this.removePending = this.addPending = false; });
 }

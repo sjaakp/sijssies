@@ -1,6 +1,19 @@
 
-import twgl from 'twgl.js/dist/4.x/twgl-full.js';
-import mat4 from 'gl-matrix/cjs/mat4.js';
+/**
+ * sjaakp/sijssies
+ * ---------------
+ *
+ * Amsterdam variant of the famous 'boids' swarm-intelligence algorithm
+ * Version 0.9.0
+ * Copyright (c) 2019
+ * Sjaak Priester, Amsterdam
+ * MIT License
+ * https://github.com/sjaakp/sijssies
+ * https://sjaakpriester.nl
+ */
+
+import twgl from 'twgl.js/dist/4.x/twgl-full';
+import mat4 from 'gl-matrix/cjs/mat4';
 
 export default function Axes(gl, settings) {
     let scale = settings.axesScale;

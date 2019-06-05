@@ -59,10 +59,10 @@ export default {
              }
         }),
         uglify({
-/*
-            output: {
-                 comments: /^!/
-            }
+  /*
+                output: {
+                     comments: /^!/
+                }
 */
         })
     ],
